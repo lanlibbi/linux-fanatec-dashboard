@@ -1,0 +1,12 @@
+[Unit]
+Description=Fanatec Wheelbase Dashboard (ftec_tuning sysfs)
+After=multi-user.target
+
+[Service]
+User=christian
+ExecStart=/usr/bin/python3 /home/christian/fanatec-dashboard/fanatec_dashboard.py 8088
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
