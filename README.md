@@ -1,4 +1,132 @@
-# Fanatec Wheelbase Dashboard für Linux
+# Fanatec Wheelbase Dashboard for Linux
+
+A web dashboard for tuning Fanatec wheel bases (CSL DD, ClubSport, Podium …) directly from your browser — built on the `ftec_tuning` sysfs interface of the community kernel driver [hid-fanatecff](https://github.com/gotzl/hid-fanatecff).
+
+No FanaLab, no Windows, no dependencies: **Python standard library only.**
+
+## Features
+
+- **Steering angle (SEN)** up to 2530° with presets (360° / 540° / 720° / 900° / 1080°)
+- **FFB strength (FF)**, Damping (DPR), Shock (SHO), Spring (SPR), Force (FOR), Intensity (INT)
+- Natural Damping / Friction / Inertia (NDP / NFR / NIN)
+- FFS, Auto-Centering Pull (ACP), Brake-Lock-Indicator (BLI), brF, FEI
+- **FullForce** and **Advanced Mode** as switches
+- Tuning slot selection (SLOT) + RESET (re-requests the tuning values from the base)
+- Live values with auto refresh, dark UI, mobile friendly
+
+## How it works
+
+The driver [hid-fanatecff](https://github.com/gotzl/hid-fanatecff) creates an `ftec_tuning`
+device under `/sys/class/ftec_tuning/` for compatible wheel bases. The files there
+correspond to the Fanatec tuning menu (SEN, FF, SHO, …). The dashboard reads and writes
+these files through a small HTTP API:
+
+- `GET /api/values` → all current tuning values (JSON)
+- `POST /api/set` → `{"attr": "FF", "value": 90}` (whitelist protected, known attributes only)
+
+No root required: The driver exposes the tuning attributes to the group `games`.
+
+> **Note:** The driver blocks writes until the tuning values have been read from the
+> base once. The dashboard triggers this read automatically (writing to `RESET`
+> requests the values — despite its name it is **not** a factory reset).
+
+## Requirements
+
+- Linux + Python 3 (tested: Python 3.12, kernel 7.0)
+- [hid-fanatecff](https://github.com/gotzl/hid-fanatecff) driver installed
+- Your user in the group `games` (see the driver's udev rule: `sudo usermod -aG games $USER`, then re-login)
+- Wheel base in **PC mode** (CSL DD: red LED)
+
+## Driver installation
+
+Easiest with the bundled script:
+
+```bash
+./install-driver.sh
+```
+
+Manually:
+
+```bash
+git clone --depth 1 https://github.com/gotzl/hid-fanatecff.git
+cd hid-fanatecff
+sudo bash ./install.sh --release      # DKMS — survives kernel updates
+sudo udevadm control --reload-rules && sudo udevadm trigger
+sudo modprobe hid_fanatec
+# unplug / replug the wheel base USB once
+```
+
+Verify:
+
+```bash
+lsmod | grep fanatec
+grep -i -A8 fanatec /proc/bus/input/devices   # "B: FF=…" = Force Feedback active
+```
+
+Notes:
+- **Secure Boot** must be disabled (or sign the kernel module yourself).
+- Kernel headers (`linux-headers-$(uname -r)`) must be installed.
+- Supported devices include: CSL DD (0EB7:0020), CSL DD Pro, ClubSport DD, CSL Elite, Podium DD1/DD2, ClubSport V2/V2.5.
+
+## Dashboard installation
+
+Manually:
+
+```bash
+python3 fanatec_dashboard.py 8088
+# → http://<server-ip>:8088
+```
+
+As a systemd service (adjust user/paths in the unit file):
+
+```bash
+sudo cp fanatec-dashboard.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now fanatec-dashboard
+```
+
+## Security
+
+The board has **no authentication**. It writes directly to the hardware.
+Run it only in a trusted network (LAN / Tailscale — optionally limit via the
+`--port` parameter and firewall rules).
+
+## Tested with
+
+- Fanatec CSL DD Wheel Base (`0eb7:0020`) + McLaren GT3 V2 Rim + CSL Pedals (connected via RJ12 to the base)
+- Ubuntu, Python 3.12, kernel 7.0
+
+## Attribute reference (Fanatec tuning menu)
+
+| Short | Meaning | Range |
+|-------|---------|-------|
+| SEN | Steering angle | 90–2530° (device dependent) |
+| FF | FFB strength | 0–100 |
+| SHO | Shock | 0–100 |
+| DPR | Damping | 0–100 |
+| FOR | Force | 0–100 |
+| SPR | Spring | 0–100 |
+| INT | Intensity | 0–100 |
+| NDP / NFR / NIN | Natural Damping / Friction / Inertia | 0–100 |
+| FFS | FFB Sensitivity | 0–100 |
+| ACP | Auto-Centering Pull | 0–100 |
+| BLI | Brake-Lock-Indicator | 0–101 |
+| FUL | FullForce | 0/1 |
+| advanced_mode | Advanced Mode | 0/1 |
+| SLOT | Active tuning slot | 1–5 |
+| RESET | Re-read tuning values from the base (trigger) | – |
+
+## Credits
+
+- [gotzl/hid-fanatecff](https://github.com/gotzl/hid-fanatecff) — the driver that makes all of this possible
+
+## License
+
+[MIT](LICENSE)
+
+---
+
+# Fanatec Wheelbase Dashboard für Linux (Deutsch)
 
 Web-Dashboard zum Tunen von Fanatec-Wheelbases (CSL DD, ClubSport, Podium …) direkt aus dem Browser — auf Basis der `ftec_tuning`-Sysfs-Schnittstelle des Community-Kerneltreibers [hid-fanatecff](https://github.com/gotzl/hid-fanatecff).
 
